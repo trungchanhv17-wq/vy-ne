@@ -1,0 +1,74 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global helpers
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // Validation helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'displayName', 'level', 'streak', 'lastActive', 'wordsMastered']) &&
+             data.keys().size() == 6 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             data.level in ['A1', 'A2', 'B1', 'B2', 'C1'] &&
+             data.streak is number &&
+             data.lastActive is number &&
+             data.wordsMastered is number;
+    }
+
+    function isValidVocabulary(data) {
+      return data.keys().hasAll(['german', 'vietnamese', 'example', 'mastered', 'nextReview', 'easeFactor', 'interval']) &&
+             data.keys().size() == 7 &&
+             data.german is string && data.german.size() <= 500 &&
+             data.vietnamese is string && data.vietnamese.size() <= 500 &&
+             data.example is string && data.example.size() <= 2000 &&
+             data.mastered is bool &&
+             data.nextReview is number &&
+             data.easeFactor is number &&
+             data.interval is number;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['role', 'content', 'timestamp']) &&
+             data.keys().size() == 3 &&
+             data.role in ['user', 'model'] &&
+             data.content is string && data.content.size() <= 10000 &&
+             data.timestamp is number;
+    }
+
+    // Match rules
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['level', 'streak', 'lastActive', 'wordsMastered', 'displayName'])
+      );
+      
+      match /vocabulary/{wordId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidVocabulary(incoming());
+        allow update: if isOwner(userId) && isValidVocabulary(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['mastered', 'nextReview', 'easeFactor', 'interval', 'example', 'vietnamese'])
+        );
+        allow delete: if isOwner(userId);
+      }
+
+      match /messages/{messageId} {
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidMessage(incoming());
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

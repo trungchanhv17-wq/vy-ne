@@ -1,0 +1,58 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Public and private user profile information.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "level": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1"] },
+        "streak": { "type": "number" },
+        "lastActive": { "type": "number" },
+        "wordsMastered": { "type": "number" }
+      },
+      "required": ["email", "displayName", "level", "streak", "lastActive", "wordsMastered"]
+    },
+    "Vocabulary": {
+      "title": "Vocabulary Word",
+      "description": "A word being learned by the user.",
+      "type": "object",
+      "properties": {
+        "german": { "type": "string" },
+        "vietnamese": { "type": "string" },
+        "example": { "type": "string" },
+        "mastered": { "type": "boolean" },
+        "nextReview": { "type": "number" },
+        "easeFactor": { "type": "number" },
+        "interval": { "type": "number" }
+      },
+      "required": ["german", "vietnamese", "example", "mastered", "nextReview"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A single message in a chat conversation.",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "model"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["role", "content", "timestamp"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "User profile document."
+    },
+    "users/{userId}/vocabulary/{wordId}": {
+      "schema": "Vocabulary",
+      "description": "User's individual vocabulary list."
+    },
+    "users/{userId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "History of chat messages with the AI tutor."
+    }
+  }
+}
